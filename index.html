@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>999Yes - Login/Registro</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>999Yes</h1>
+    <div id="loginForm" class="form">
+      <h2>Login</h2>
+      <input type="email" id="email" placeholder="E-mail" required>
+      <input type="password" id="password" placeholder="Senha" required>
+      <button onclick="login()">Entrar</button>
+    </div>
+    <div id="registerForm" class="form" style="display: none;">
+      <h2>Registrar</h2>
+      <input type="email" id="regEmail" placeholder="E-mail" required>
+      <input type="password" id="regPassword" placeholder="Senha" required>
+      <button onclick="register()">Registrar</button>
+    </div>
+    <button onclick="toggleForm()">Não tem conta? Registre-se</button>
+    <div id="userPanel" style="display: none;">
+      <h2>Bem-vindo!</h2>
+      <p>Saldo: <span id="balance">0</span> reais</p>
+      <button onclick="deposit()">Depositar</button>
+      <button onclick="doTask()">Fazer Tarefa (+750 reais)</button>
+      <button onclick="withdraw()">Sacar (mínimo 25.000)</button>
+    </div>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    let user = null;
+
+    function toggleForm() {
+      $("#loginForm").toggle();
+      $("#registerForm").toggle();
+    }
+
+    function register() {
+      const email = $("#regEmail").val();
+      const password = $("#regPassword").val();
+      $.post("/register", { email, password }, (data) => {
+        alert(data.message);
+        if (data.success) toggleForm();
+      });
+    }
+
+    function login() {
+      const email = $("#email").val();
+      const password = $("#password").val();
+      $.post("/login", { email, password }, (data) => {
+        if (data.success) {
+          user = data.user;
+          $("#loginForm").hide();
+          $("#userPanel").show();
+          $("#balance").text(user.balance);
+        } else {
+          alert(data.message);
+        }
+      });
+    }
+
+    function deposit() {
+      if (user) {
+        $.post("/deposit", { userId: user.id }, (data) => {
+          alert(data.message);
+          if (data.success) {
+            // Simula redirecionamento para Telegram (link estático como exemplo)
+            window.location.href = "https://t.me/yourbot?start=deposit_" + user.id;
+          }
+        });
+      }
+    }
+
+    function doTask() {
+      if (user) {
+        $.post("/task", { userId: user.id }, (data) => {
+          if (data.success) {
+            user.balance += 750;
+            $("#balance").text(user.balance);
+            alert("Tarefa concluída! +750 reais");
+          }
+        });
+      }
+    }
+
+    function withdraw() {
+      if (user && user.balance >= 25000) {
+        $.post("/withdraw", { userId: user.id }, (data) => {
+          if (data.success) {
+            user.balance = 0;
+            $("#balance").text(user.balance);
+            alert("Saque de " + data.amount + " reais efetuado! Conta zerada.");
+          }
+        });
+      } else {
+        alert("Saldo insuficiente! Mínimo de 25.000 reais.");
+      }
+    }
+  </script>
